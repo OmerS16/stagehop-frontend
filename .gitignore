@@ -1,0 +1,29 @@
+# Node modules
+node_modules/
+
+# Build artifacts
+android/
+ios/
+*.apk
+*.ipa
+*.xcworkspace
+*.xcodeproj
+*.xcuserdata
+
+# Expo folders
+.expo/
+.expo-shared/
+
+# Metro bundler cache
+.cache/
+
+# Misc
+*.log
+*.DS_Store
+*.env
+.env.*
+
+# VSCode & editor junk
+.vscode/
+.idea/
+*.swp
