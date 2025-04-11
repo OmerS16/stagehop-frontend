@@ -1,6 +1,16 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableWithoutFeedback, Image } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import {
+  View, Text, StyleSheet, Dimensions, Pressable, Image,
+  Animated, TouchableWithoutFeedback, FlatList
+} from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import {
+  PanGestureHandler,
+  GestureHandlerRootView,
+  PanGestureHandlerGestureEvent,
+  State
+} from 'react-native-gesture-handler';
+import * as Linking from 'expo-linking';
 
 type Event = {
   type: 'Feature';
@@ -24,6 +34,11 @@ type Event = {
 export default function MapScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const sheetHeight = Dimensions.get('window').height * 0.4;
+
+  const translateY = useRef(new Animated.Value(sheetHeight + 100)).current;
+  const listOpen = useRef(false);
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     fetch('https://stagehop.app/events/today')
@@ -32,54 +47,180 @@ export default function MapScreen() {
       .catch(err => console.error('Failed to fetch events:', err));
   }, []);
 
+  useEffect(() => {
+    Animated.timing(translateY, {
+      toValue: 0,
+      duration: 500,
+      useNativeDriver: true,
+    }).start(() => {
+      listOpen.current = true;
+    });
+  }, []);
+
   const handleMapPress = () => {
-    if (selectedEvent) setSelectedEvent(null);
+    if (selectedEvent) {
+      setSelectedEvent(null);
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        listOpen.current = true;
+      });
+    }
+  };
+
+  const handleCardPress = () => {
+    if (selectedEvent?.properties.link) {
+      Linking.openURL(selectedEvent.properties.link);
+    }
+  };
+
+  const handleEventSelect = (event: Event) => {
+    setSelectedEvent(event);
+    Animated.timing(translateY, {
+      toValue: sheetHeight + 100,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      listOpen.current = false;
+    });
+
+    const [lng, lat] = event.geometry.coordinates;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      },
+      500
+    );
+  };
+
+  const renderListItem = ({ item }: { item: Event }) => (
+    <Pressable style={styles.listItem} onPress={() => handleEventSelect(item)}>
+      <Image source={{ uri: item.properties.img }} style={styles.listItemImage} />
+      <View style={styles.listItemText}>
+        <Text style={styles.listItemTitle}>{item.properties.show_name}</Text>
+        <Text style={styles.listItemVenue}>{item.properties.venue.name}</Text>
+        <Text style={styles.listItemTime}>
+          {new Date(item.properties.date).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })}
+        </Text>
+      </View>
+    </Pressable>
+  );
+
+  const onHandlebarGestureEnd = (event: PanGestureHandlerGestureEvent) => {
+    const { translationY, velocityY } = event.nativeEvent;
+
+    if (event.nativeEvent.state === State.END) {
+      if (translationY > 100 && velocityY > 200) {
+        Animated.timing(translateY, {
+          toValue: sheetHeight + 100,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          listOpen.current = false;
+        });
+      } else {
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          listOpen.current = true;
+        });
+      }
+    }
+  };
+
+  const onPopupSwipeEnd = (event: PanGestureHandlerGestureEvent) => {
+    const dy = event.nativeEvent.translationY;
+    const vy = event.nativeEvent.velocityY;
+
+    if (dy > 50 && vy > 200) {
+      setSelectedEvent(null);
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        listOpen.current = true;
+      });
+    }
   };
 
   return (
-    <TouchableWithoutFeedback onPress={handleMapPress}>
-      <View style={styles.container}>
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: 32.0853,
-            longitude: 34.7818,
-            latitudeDelta: 0.1,
-            longitudeDelta: 0.1,
-          }}
-        >
-          {events.map(event => (
-            <Marker
-              key={event.properties.id}
-              coordinate={{
-                latitude: event.geometry.coordinates[1],
-                longitude: event.geometry.coordinates[0],
-              }}
-              onPress={() => setSelectedEvent(event)}
-            />
-          ))}
-        </MapView>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <TouchableWithoutFeedback onPress={handleMapPress}>
+        <View style={styles.container}>
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            initialRegion={{
+              latitude: 32.0853,
+              longitude: 34.7818,
+              latitudeDelta: 0.1,
+              longitudeDelta: 0.1,
+            }}
+          >
+            {events.map(event => (
+              <Marker
+                key={event.properties.id}
+                coordinate={{
+                  latitude: event.geometry.coordinates[1],
+                  longitude: event.geometry.coordinates[0],
+                }}
+                onPress={() => handleEventSelect(event)}
+              />
+            ))}
+          </MapView>
 
-        {selectedEvent && (
-          <View style={styles.popup}>
-            <Image
-              source={{ uri: selectedEvent.properties.img }}
-              style={styles.image}
-              resizeMode="cover"
+          {selectedEvent && (
+            <PanGestureHandler onHandlerStateChange={onPopupSwipeEnd}>
+              <View style={styles.popupWrapper}>
+                <Pressable onPress={handleCardPress} style={styles.popupContent}>
+                  {!!selectedEvent.properties.img && (
+                    <Image source={{ uri: selectedEvent.properties.img }} style={styles.image} resizeMode="cover" />
+                  )}
+                  <Text style={styles.popupTitle}>{selectedEvent.properties.show_name}</Text>
+                  <Text style={styles.popupSubtitle}>{selectedEvent.properties.venue.name}</Text>
+                  <Text style={styles.popupTime}>
+                    {new Date(selectedEvent.properties.date).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                    })}
+                  </Text>
+                  <Text style={styles.popupHint}>Swipe down to close</Text>
+                </Pressable>
+              </View>
+            </PanGestureHandler>
+          )}
+
+          <Animated.View style={[styles.listContainer, { transform: [{ translateY }] }]}>
+            <PanGestureHandler onHandlerStateChange={onHandlebarGestureEnd}>
+              <View style={styles.handlebarWrapper}>
+                <View style={styles.handlebar} />
+              </View>
+            </PanGestureHandler>
+
+            <FlatList
+              data={events}
+              keyExtractor={item => item.properties.id.toString()}
+              renderItem={renderListItem}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              showsVerticalScrollIndicator={false}
             />
-            <Text style={styles.popupTitle}>{selectedEvent.properties.show_name}</Text>
-            <Text style={styles.popupSubtitle}>{selectedEvent.properties.venue.name}</Text>
-            <Text style={styles.popupTime}>
-              {new Date(selectedEvent.properties.date).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false, // ✅ 24h format
-              })}
-            </Text>
-          </View>
-        )}
-      </View>
-    </TouchableWithoutFeedback>
+          </Animated.View>
+        </View>
+      </TouchableWithoutFeedback>
+    </GestureHandlerRootView>
   );
 }
 
@@ -89,11 +230,14 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   },
-  popup: {
+  popupWrapper: {
     position: 'absolute',
     bottom: 30,
     left: 20,
     right: 20,
+    zIndex: 10,
+  },
+  popupContent: {
     backgroundColor: 'white',
     padding: 15,
     borderRadius: 12,
@@ -101,6 +245,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
     alignItems: 'center',
   },
   popupTitle: {
@@ -118,10 +263,66 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
+  popupHint: {
+    fontSize: 12,
+    color: '#1e90ff',
+    marginTop: 6,
+  },
   image: {
     width: '100%',
     height: 140,
     borderRadius: 8,
     marginBottom: 10,
+  },
+  listContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: Dimensions.get('window').height * 0.4,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 8,
+    zIndex: 15,
+    overflow: 'visible',
+  },
+  handlebarWrapper: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  handlebar: {
+    width: 60,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#444',
+  },
+  listItem: {
+    flexDirection: 'row',
+    padding: 12,
+    borderBottomColor: '#eee',
+    borderBottomWidth: 1,
+  },
+  listItemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  listItemText: {
+    justifyContent: 'center',
+  },
+  listItemTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  listItemVenue: {
+    fontSize: 12,
+    color: '#555',
+  },
+  listItemTime: {
+    fontSize: 12,
+    color: '#777',
   },
 });
