@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View, Text, Dimensions, Pressable, Image,
   Animated, TouchableWithoutFeedback, FlatList, ScrollView} from 'react-native';
@@ -118,7 +118,10 @@ export default function MapScreen() {
         <Text style={styles.listItemTitle}>{item.properties.show_name}</Text>
         <Text style={styles.listItemVenue}>{item.properties.venue.name}</Text>
         <Text style={styles.listItemTime}>
-          {new Date(item.properties.date).toLocaleTimeString([], {
+          {new Date(item.properties.date).toLocaleString([], {
+            weekday: 'short',
+            day: '2-digit',
+            month: 'short',
             hour: '2-digit',
             minute: '2-digit',
             hour12: false,
@@ -168,36 +171,63 @@ export default function MapScreen() {
     }
   };
 
+  const renderedMarkers = useMemo(() => (
+    events.map(event => (
+      <Marker
+        key={event.properties.id}
+        coordinate={{
+          latitude: event.geometry.coordinates[1],
+          longitude: event.geometry.coordinates[0],
+        }}
+        onPress={() => handleEventSelect(event)}
+        anchor={{ x: 0.5, y: 0.5 }}
+      >
+        <View style={styles.markerCircle}>
+          <Image
+            source={{ uri: event.properties.venue.logo }}
+            style={styles.markerLogo}
+            resizeMode="cover"
+          />
+        </View>
+      </Marker>
+    ))
+  ), [events]);
+  
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TouchableWithoutFeedback onPress={handleMapPress}>
         <View style={styles.container}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dateSelector}
-            style={{ height: filterHeight }}
-          >
-            {dateOptions.map(option => (
-              <Pressable
-                key={option.value}
-                onPress={() => setSelectedDate(option.value)}
-                style={[
-                  styles.dateButton,
-                  selectedDate === option.value && styles.dateButtonSelected,
-                ]}
+          <View style={styles.dateScrollWrapper}>
+            <Text style={styles.arrow}>‹</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.dateSelector}
+                style={{ height: filterHeight }}
               >
-                <Text
-                  style={[
-                    styles.dateText,
-                    selectedDate === option.value && styles.dateTextSelected,
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                {dateOptions.map(option => (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => setSelectedDate(option.value)}
+                    style={[
+                      styles.dateButton,
+                      selectedDate === option.value && styles.dateButtonSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dateText,
+                        selectedDate === option.value && styles.dateTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <Text style={styles.arrow}>›</Text>
+            </View>
           <View style={{ height: screenHeight - filterHeight }}>
             <MapView
               ref={mapRef}
@@ -209,25 +239,7 @@ export default function MapScreen() {
                 longitudeDelta: 0.1,
               }}
             >
-              {events.map(event => (
-                <Marker
-                  key={event.properties.id}
-                  coordinate={{
-                    latitude: event.geometry.coordinates[1],
-                    longitude: event.geometry.coordinates[0],
-                  }}
-                  onPress={() => handleEventSelect(event)}
-                  anchor={{ x: 0.5, y: 0.5 }}
-                >
-                  <View style={styles.markerCircle}>
-                    <Image
-                      source={{ uri: event.properties.venue.logo }}
-                      style={styles.markerLogo}
-                      resizeMode="cover"
-                    />
-                  </View>
-                </Marker>
-              ))}
+              {renderedMarkers}
             </MapView>
           </View>
           {selectedEvent && (
@@ -240,7 +252,10 @@ export default function MapScreen() {
                   <Text style={styles.popupTitle}>{selectedEvent.properties.show_name}</Text>
                   <Text style={styles.popupSubtitle}>{selectedEvent.properties.venue.name}</Text>
                   <Text style={styles.popupTime}>
-                    {new Date(selectedEvent.properties.date).toLocaleTimeString([], {
+                    {new Date(selectedEvent.properties.date).toLocaleString([], {
+                      weekday: 'short',
+                      day: '2-digit',
+                      month: 'short',
                       hour: '2-digit',
                       minute: '2-digit',
                       hour12: false,

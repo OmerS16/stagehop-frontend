@@ -11,8 +11,8 @@ const styles = StyleSheet.create({
     height: Dimensions.get('window').height,
   },
   markerCircle: {
-    width: 40,
-    height: 40,
+    width: 34,
+    height: 34,
     borderRadius: 20,
     backgroundColor: '#fff',
     borderWidth: 2,
@@ -22,8 +22,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   markerLogo: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 18,
   },
   popupWrapper: {
@@ -145,6 +145,19 @@ const styles = StyleSheet.create({
   dateTextSelected: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  dateScrollWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: '#fff',
+  },
+  
+  arrow: {
+    fontSize: 20,
+    color: '#aaa',
+    paddingHorizontal: 5,
+    zIndex: 5,
   },
 });
 
