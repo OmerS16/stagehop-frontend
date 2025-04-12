@@ -27,6 +27,7 @@ type Event = {
     venue: {
       id: number;
       name: string;
+      logo: string; // ✅ logo URL
     };
   };
 };
@@ -39,13 +40,23 @@ export default function MapScreen() {
   const translateY = useRef(new Animated.Value(sheetHeight + 100)).current;
   const listOpen = useRef(false);
   const mapRef = useRef<MapView>(null);
+  const today = new Date();
+  const dateOptions = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    return {
+      label: i === 0 ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' }),
+      value: d.toISOString().split('T')[0] + 'T00:00:00',
+    };
+  });
+  const [selectedDate, setSelectedDate] = useState(dateOptions[0].value);
 
   useEffect(() => {
-    fetch('https://stagehop.app/events/today')
+    fetch(`https://stagehop.app/events?date_from=${selectedDate}&limit=10&offset=0`)
       .then(res => res.json())
       .then(data => setEvents(data.features))
       .catch(err => console.error('Failed to fetch events:', err));
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     Animated.timing(translateY, {
@@ -159,6 +170,28 @@ export default function MapScreen() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TouchableWithoutFeedback onPress={handleMapPress}>
         <View style={styles.container}>
+        <View style={styles.dateSelector}>
+          {dateOptions.map(option => (
+            <Pressable
+              key={option.value}
+              onPress={() => setSelectedDate(option.value)}
+              style={[
+                styles.dateButton,
+                selectedDate === option.value && styles.dateButtonSelected,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dateText,
+                  selectedDate === option.value && styles.dateTextSelected,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={{ fontSize: 16, padding: 10 }}>Events: {events.length}</Text>
           <MapView
             ref={mapRef}
             style={styles.map}
@@ -177,7 +210,16 @@ export default function MapScreen() {
                   longitude: event.geometry.coordinates[0],
                 }}
                 onPress={() => handleEventSelect(event)}
-              />
+                anchor={{ x: 0.5, y: 0.5 }}
+              >
+                <View style={styles.markerCircle}>
+                  <Image
+                    source={{ uri: event.properties.venue.logo }}
+                    style={styles.markerLogo}
+                    resizeMode="cover"
+                  />
+                </View>
+              </Marker>
             ))}
           </MapView>
 
@@ -229,6 +271,22 @@ const styles = StyleSheet.create({
   map: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
+  },
+  markerCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#1e90ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  markerLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   popupWrapper: {
     position: 'absolute',
@@ -324,5 +382,29 @@ const styles = StyleSheet.create({
   listItemTime: {
     fontSize: 12,
     color: '#777',
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+  },
+  dateButton: {
+    marginRight: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#eee',
+  },
+  dateButtonSelected: {
+    backgroundColor: '#1e90ff',
+  },
+  dateText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  dateTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
