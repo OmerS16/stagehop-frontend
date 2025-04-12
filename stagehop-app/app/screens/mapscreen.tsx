@@ -1,15 +1,9 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import {
-  View, Text, Dimensions, Pressable, Image,
-  Animated, TouchableWithoutFeedback, FlatList, ScrollView} from 'react-native';
+import { View, Text, Dimensions, Pressable, Image, Animated, TouchableWithoutFeedback, FlatList, ScrollView } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import {
-  PanGestureHandler,
-  GestureHandlerRootView,
-  PanGestureHandlerGestureEvent,
-  State
-} from 'react-native-gesture-handler';
+import { PanGestureHandler, GestureHandlerRootView, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import * as Linking from 'expo-linking';
+import * as Location from 'expo-location';
 import styles from './styles';
 
 type Event = {
@@ -27,7 +21,7 @@ type Event = {
     venue: {
       id: number;
       name: string;
-      logo: string; // ✅ logo URL
+      logo: string;
     };
   };
 };
@@ -35,13 +29,23 @@ type Event = {
 export default function MapScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    heading: number;
+  } | null>(null);
+
   const sheetHeight = Dimensions.get('window').height * 0.4;
   const screenHeight = Dimensions.get('window').height;
   const filterHeight = 60
 
-  const translateY = useRef(new Animated.Value(sheetHeight + 100)).current;
+  const CLOSED_POSITION = sheetHeight;
+  const OPEN_POSITION = 0;
+
+  const translateY = useRef(new Animated.Value(CLOSED_POSITION)).current;
   const listOpen = useRef(false);
   const mapRef = useRef<MapView>(null);
+
   const today = new Date();
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
@@ -54,6 +58,51 @@ export default function MapScreen() {
   const [selectedDate, setSelectedDate] = useState(dateOptions[0].value);
 
   useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('Permission to access location was denied');
+        return;
+      }
+  
+      await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000,
+          distanceInterval: 10,
+        },
+        (location) => {
+          setUserLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            heading: location.coords.heading ?? 0,
+          });
+        }
+      );
+    })();
+  }, []);
+
+  const openGoogleMapsDirections = (venueLat: number, venueLng: number) => {
+    if (!userLocation) return;
+  
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.latitude},${userLocation.longitude}&destination=${venueLat},${venueLng}&travelmode=walking`;
+    Linking.openURL(url);
+  };
+
+  useEffect(() => {
+    mapRef.current?.animateCamera({
+      center: {
+        latitude: 32.0510,
+        longitude: 34.7706,
+      },
+      pitch: 0,
+      heading: 0,
+      altitude: 500,
+      zoom: 13,
+    }, { duration: 1000});
+  }, []);
+
+  useEffect(() => {
     fetch(`https://stagehop.app/events?date_from=${selectedDate}&limit=10&offset=0`)
       .then(res => res.json())
       .then(data => setEvents(data.features))
@@ -62,13 +111,13 @@ export default function MapScreen() {
 
   useEffect(() => {
     Animated.timing(translateY, {
-      toValue: 0,
-      duration: 500,
+      toValue: OPEN_POSITION,
+      duration: 300,
       useNativeDriver: true,
     }).start(() => {
       listOpen.current = true;
     });
-  }, []);
+  }, [])
 
   const handleMapPress = () => {
     if (selectedEvent) {
@@ -102,7 +151,7 @@ export default function MapScreen() {
     const [lng, lat] = event.geometry.coordinates;
     mapRef.current?.animateToRegion(
       {
-        latitude: lat,
+        latitude: lat - 0.005,
         longitude: lng,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
@@ -162,14 +211,40 @@ export default function MapScreen() {
     if (dy > 50 && vy > 200) {
       setSelectedEvent(null);
       Animated.timing(translateY, {
-        toValue: 0,
+        toValue: CLOSED_POSITION,
         duration: 300,
         useNativeDriver: true,
       }).start(() => {
-        listOpen.current = true;
+        listOpen.current = false;
       });
     }
   };
+
+  const renderedUserMarker = useMemo(() => {
+    if (!userLocation) return null;
+  
+    return (
+      <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: '#4285F4',
+              borderColor: '#fff',
+              borderWidth: 3,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 5,
+            }}
+          />
+        </View>
+      </Marker>
+    );
+  }, [userLocation]);
 
   const renderedMarkers = useMemo(() => (
     events.map(event => (
@@ -231,14 +306,15 @@ export default function MapScreen() {
           <View style={{ height: screenHeight - filterHeight }}>
             <MapView
               ref={mapRef}
-              style={{ flex: 1}}
+              style={{ flex: 1 }}
               initialRegion={{
-                latitude: 32.0853,
-                longitude: 34.7818,
+                latitude: 32.06081,
+                longitude: 34.77303,
                 latitudeDelta: 0.1,
                 longitudeDelta: 0.1,
               }}
             >
+              {renderedUserMarker}
               {renderedMarkers}
             </MapView>
           </View>
@@ -263,17 +339,39 @@ export default function MapScreen() {
                   </Text>
                   <Text style={styles.popupHint}>Swipe down to close</Text>
                 </Pressable>
+                <Pressable
+                  onPress={() =>
+                    openGoogleMapsDirections(
+                      selectedEvent.geometry.coordinates[1],
+                      selectedEvent.geometry.coordinates[0]
+                    )
+                  }
+                  style={styles.directionsButton}
+                >
+                  <Text style={styles.directionsText}>Directions</Text>
+                </Pressable>
               </View>
             </PanGestureHandler>
           )}
-
-          <Animated.View style={[styles.listContainer, { transform: [{ translateY }] }]}>
-            <PanGestureHandler onHandlerStateChange={onHandlebarGestureEnd}>
-              <View style={styles.handlebarWrapper}>
-                <View style={styles.handlebar} />
-              </View>
-            </PanGestureHandler>
-
+          <PanGestureHandler onHandlerStateChange={onHandlebarGestureEnd}>
+            <Animated.View
+              style={[
+                styles.handlebarWrapper,
+                {
+                  transform: [{ translateY }],
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: screenHeight - (sheetHeight + 100),
+                  zIndex: 15,
+                  alignItems: 'center',
+                },
+              ]}
+            >
+              <View style={styles.handlebar} />
+            </Animated.View>
+          </PanGestureHandler>
+          <Animated.View style={[styles.listContainer, { height: screenHeight * 0.4 + 100 }, { transform: [{ translateY }] }]}>
             <FlatList
               data={events}
               keyExtractor={item => item.properties.id.toString()}

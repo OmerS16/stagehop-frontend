@@ -11,20 +11,19 @@ const styles = StyleSheet.create({
     height: Dimensions.get('window').height,
   },
   markerCircle: {
-    width: 34,
-    height: 34,
+    width: 33,
+    height: 33,
     borderRadius: 20,
     backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#1e90ff',
+    borderColor: '#a60f0f',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   markerLogo: {
-    width: 34,
-    height: 34,
-    borderRadius: 18,
+    width: 33,
+    height: 33,
   },
   popupWrapper: {
     position: 'absolute',
@@ -72,27 +71,24 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     position: 'absolute',
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    height: Dimensions.get('window').height * 0.4,
     backgroundColor: 'white',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingTop: 8,
-    zIndex: 15,
-    overflow: 'visible',
+    overflow: 'hidden',
   },
   handlebarWrapper: {
-    height: 40,
+    height: 30,
     justifyContent: 'center',
-    alignItems: 'center',
   },
+  
   handlebar: {
-    width: 60,
+    width: 42,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#444',
+    backgroundColor: '#a6a6a6',
   },
   listItem: {
     flexDirection: 'row',
@@ -159,6 +155,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     zIndex: 5,
   },
+  directionsButton: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#4285F4',
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  
+  directionsText: {
+    color: 'white',
+    fontWeight: 'bold',
+  }
 });
 
 export default styles;
