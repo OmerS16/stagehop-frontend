@@ -75,18 +75,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'white',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     overflow: 'hidden',
   },
   handlebarWrapper: {
     height: 30,
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     justifyContent: 'center',
   },
   
   handlebar: {
-    width: 42,
-    height: 8,
+    width: 40,
+    height: 6,
     borderRadius: 4,
     backgroundColor: '#a6a6a6',
   },

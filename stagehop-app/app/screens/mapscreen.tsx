@@ -35,7 +35,7 @@ export default function MapScreen() {
     heading: number;
   } | null>(null);
 
-  const sheetHeight = Dimensions.get('window').height * 0.4;
+  const sheetHeight = Dimensions.get('window').height * 0.25;
   const screenHeight = Dimensions.get('window').height;
   const filterHeight = 60
 
@@ -371,7 +371,7 @@ export default function MapScreen() {
               <View style={styles.handlebar} />
             </Animated.View>
           </PanGestureHandler>
-          <Animated.View style={[styles.listContainer, { height: screenHeight * 0.4 + 100 }, { transform: [{ translateY }] }]}>
+          <Animated.View style={[styles.listContainer, { height: screenHeight * 0.25 + 100 }, { transform: [{ translateY }] }]}>
             <FlatList
               data={events}
               keyExtractor={item => item.properties.id.toString()}
