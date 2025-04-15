@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { View, Text, Dimensions, Pressable, Image, Animated, TouchableWithoutFeedback, FlatList, ScrollView } from 'react-native';
+import { View, Text, Dimensions, Pressable, Image, Animated, TouchableWithoutFeedback, FlatList, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { PanGestureHandler, GestureHandlerRootView, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import * as Linking from 'expo-linking';
@@ -29,6 +29,7 @@ type Event = {
 export default function MapScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -45,6 +46,13 @@ export default function MapScreen() {
   const translateY = useRef(new Animated.Value(CLOSED_POSITION)).current;
   const listOpen = useRef(false);
   const mapRef = useRef<MapView>(null);
+  const flatListRef = useRef<FlatList>(null);
+
+  type CachedEntry = {
+    data: Event[];
+    timestamp: number;
+  };
+  const cacheRef = useRef<Record<string, CachedEntry>>({});
 
   const today = new Date();
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
@@ -103,11 +111,47 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    fetch(`https://stagehop.app/events?date_from=${selectedDate}&limit=10&offset=0`)
-      .then(res => res.json())
-      .then(data => setEvents(data.features))
-      .catch(err => console.error('Failed to fetch events:', err));
+    const fetchEvents = async () => {
+      const now = Date.now();
+      const cached = cacheRef.current[selectedDate];
+      const cacheDuration = 60 * 60 * 1000;
+
+      if (cached && now - cached.timestamp < cacheDuration) {
+        setEvents(cached.data);
+        return;
+      }
+
+      try {
+        setLoading(true);
+  
+        const res = await fetch(`https://stagehop.app/events?date_from=${selectedDate}&limit=10&offset=0`);
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('Server error:', res.status, text);
+          return;
+        }
+  
+        const data = await res.json();
+        cacheRef.current[selectedDate] = {
+          data: data.features,
+          timestamp: now,
+        };
+        setEvents(data.features);
+      } catch (err) {
+        console.error('Failed to fetch events:', err);
+      } finally {
+        setTimeout(() => setLoading(false), 300);
+      }
+    };
+  
+    fetchEvents();
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (events.length > 0) {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
+  }, [events]);
 
   useEffect(() => {
     Animated.timing(translateY, {
@@ -211,7 +255,7 @@ export default function MapScreen() {
     if (dy > 50 && vy > 200) {
       setSelectedEvent(null);
       Animated.timing(translateY, {
-        toValue: CLOSED_POSITION,
+        toValue: OPEN_POSITION,
         duration: 300,
         useNativeDriver: true,
       }).start(() => {
@@ -372,13 +416,27 @@ export default function MapScreen() {
             </Animated.View>
           </PanGestureHandler>
           <Animated.View style={[styles.listContainer, { height: screenHeight * 0.25 + 100 }, { transform: [{ translateY }] }]}>
-            <FlatList
-              data={events}
-              keyExtractor={item => item.properties.id.toString()}
-              renderItem={renderListItem}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              showsVerticalScrollIndicator={false}
-            />
+          {loading && (
+            <View style={{
+              ...StyleSheet.absoluteFillObject,
+              backgroundColor: 'white',
+              zIndex: 99,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <Animated.View>
+                <ActivityIndicator size="large" color="#4285F4" />
+              </Animated.View>
+            </View>
+          )}
+          <FlatList
+            ref={flatListRef}
+            data={events}
+            keyExtractor={item => item.properties.id.toString()}
+            renderItem={renderListItem}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+          />
           </Animated.View>
         </View>
       </TouchableWithoutFeedback>
