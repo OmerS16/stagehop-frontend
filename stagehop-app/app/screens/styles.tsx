@@ -168,7 +168,23 @@ const styles = StyleSheet.create({
   directionsText: {
     color: 'white',
     fontWeight: 'bold',
-  }
+  },
+  arrowIndicatorLeft: {
+    position: 'absolute',
+    top: '50%',
+    left: 10,
+    fontSize: 32,
+    color: '#444',
+    zIndex: 20,
+  },
+  arrowIndicatorRight: {
+    position: 'absolute',
+    top: '50%',
+    right: 10,
+    fontSize: 32,
+    color: '#444',
+    zIndex: 20,
+  },
 });
 
 export default styles;
