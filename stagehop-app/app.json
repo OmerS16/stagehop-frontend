@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "stagehop-app",
-    "slug": "stagehop-app",
+    "name": "stagehop",
+    "slug": "stagehop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,6 +15,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
       },
       "package": "com.omers16.stagehop"
     },
