@@ -236,6 +236,7 @@ export default function MapScreen() {
           listOpen.current = false;
         });
       } else {
+        setSelectedEvent(null);
         Animated.timing(translateY, { toValue: OPEN_POSITION, duration: 300, useNativeDriver: true }).start(() => {
           listOpen.current = true;
         });
@@ -389,7 +390,7 @@ export default function MapScreen() {
                   position: 'absolute',
                   left: 0,
                   right: 0,
-                  top: screenHeight - (sheetHeight + 100),
+                  top: screenHeight - (sheetHeight + 95),
                   zIndex: 20,
                   alignItems: 'center',
                   transform: [{ translateY }],
