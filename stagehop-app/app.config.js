@@ -1,5 +1,4 @@
-/** @type {import('@expo/config').ExpoConfig} */
-export default ({ config }) => {
+module.exports = ({ config }) => {
     // Read the secret injected by EAS
     const mapsKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!mapsKey) {
@@ -9,7 +8,10 @@ export default ({ config }) => {
     }
   
     return {
+      // merge base config
       ...config,
+  
+      // core properties
       name: "stagehop",
       slug: "stagehop",
       version: "1.0.0",
@@ -18,10 +20,14 @@ export default ({ config }) => {
       scheme: "stagehop",
       userInterfaceStyle: "automatic",
       newArchEnabled: true,
+  
       ios: {
         supportsTablet: true,
+        ...config.ios,
       },
+  
       android: {
+        ...config.android,
         adaptiveIcon: {
           foregroundImage: "./assets/images/adaptive-icon.png",
           backgroundColor: "#ffffff",
@@ -33,11 +39,13 @@ export default ({ config }) => {
           },
         },
       },
+  
       web: {
         bundler: "metro",
         output: "static",
         favicon: "./assets/images/favicon.png",
       },
+  
       plugins: [
         "expo-router",
         [
@@ -50,9 +58,11 @@ export default ({ config }) => {
           },
         ],
       ],
+  
       experiments: {
         typedRoutes: true,
       },
+  
       extra: {
         router: {
           origin: false,
@@ -61,6 +71,7 @@ export default ({ config }) => {
           projectId: "6abbfc0b-da4d-4eed-b8b9-2b1589d7a88c",
         },
       },
+  
       owner: "omers16",
     };
   };
