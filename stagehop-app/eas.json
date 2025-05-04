@@ -1,4 +1,7 @@
 {
+    "cli": {
+        "requireCommit": true
+    },
     "build": {
       "production": {
         "android": {
@@ -6,4 +9,4 @@
         }
       }
     }
-  }  
+  }
