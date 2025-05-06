@@ -19,7 +19,8 @@ module.exports = ({ config }) => {
       icon: "./assets/images/icon.png",
       scheme: "stagehop",
       userInterfaceStyle: "automatic",
-      newArchEnabled: true,
+      // Disable new architecture for react-native-maps compatibility
+      newArchEnabled: false,
   
       ios: {
         supportsTablet: true,
