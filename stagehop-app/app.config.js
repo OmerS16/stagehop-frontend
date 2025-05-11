@@ -16,7 +16,7 @@ module.exports = ({ config }) => {
       slug: "stagehop",
       version: "1.0.0",
       orientation: "portrait",
-      icon: "./assets/images/icon.png",
+      icon: "./assets/images/new_icon.png",
       scheme: "stagehop",
       userInterfaceStyle: "automatic",
       // Disable new architecture for react-native-maps compatibility
@@ -30,8 +30,8 @@ module.exports = ({ config }) => {
       android: {
         ...config.android,
         adaptiveIcon: {
-          foregroundImage: "./assets/images/adaptive-icon.png",
-          backgroundColor: "#ffffff",
+          foregroundImage: "./assets/images/new_icon.png",
+          backgroundColor: "#000000",
         },
         package: "com.omers16.stagehop",
         config: {
@@ -44,7 +44,7 @@ module.exports = ({ config }) => {
       web: {
         bundler: "metro",
         output: "static",
-        favicon: "./assets/images/favicon.png",
+        favicon: "./assets/images/new_icon.png",
       },
   
       plugins: [
